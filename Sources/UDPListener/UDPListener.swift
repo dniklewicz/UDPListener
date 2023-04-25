@@ -25,13 +25,16 @@ public class UDPListener: ObservableObject {
 		params.allowLocalEndpointReuse = true
 		
 		self.listener = try NWListener(using: params, on: port)
-		self.listener?.stateUpdateHandler = { update in
+		self.listener?.stateUpdateHandler = { [weak self] update in
 			switch update {
 			case .ready:
-				self.isReady = true
-			case .failed, .cancelled:
-				self.isListening = false
-				self.isReady = false
+				self?.isReady = true
+			case let .failed(error):
+				self?.message.send(completion: .failure(.other(error)))
+				fallthrough
+			case .cancelled:
+				self?.isListening = false
+				self?.isReady = false
 			default:
 				break
 			}
