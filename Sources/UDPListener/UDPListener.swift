@@ -12,7 +12,7 @@ public class UDPListener: ObservableObject {
 	private var connection: NWConnection?
 	private let queue = DispatchQueue.global(qos: .userInitiated)
 	
-	public let message: PassthroughSubject<Data, UDPListenerError> = .init()
+	public let dataPublisher: PassthroughSubject<Data, UDPListenerError> = .init()
 	
 	@Published private(set) public var isReady: Bool = false
 	public var isReadyPublisher: Published<Bool>.Publisher { $isReady }
@@ -30,7 +30,7 @@ public class UDPListener: ObservableObject {
 			case .ready:
 				self?.isReady = true
 			case let .failed(error):
-				self?.message.send(completion: .failure(.other(error)))
+				self?.dataPublisher.send(completion: .failure(.other(error)))
 				fallthrough
 			case .cancelled:
 				self?.isListening = false
@@ -65,14 +65,14 @@ public class UDPListener: ObservableObject {
 	func receive() {
 		connection?.receiveMessage { [weak self] data, context, isComplete, error in
 			if let error {
-				self?.message.send(completion: .failure(.other(error)))
+				self?.dataPublisher.send(completion: .failure(.other(error)))
 				return
 			}
 			guard isComplete, let data else {
-				self?.message.send(completion: .failure(.emptyData))
+				self?.dataPublisher.send(completion: .failure(.emptyData))
 				return
 			}
-			self?.message.send(data)
+			self?.dataPublisher.send(data)
 			if self?.isListening == true {
 				self?.receive()
 			}
